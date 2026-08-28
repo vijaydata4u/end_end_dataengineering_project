@@ -1,0 +1,11 @@
+sources:
+  - name: bronze
+    database: bronze
+    schema: netflix
+    tables:
+      - name: netflix_titles
+      - name: netflix_reviews
+      - name: netflix_movies
+      - name: netflix_stock_history
+      - name: netflix_tv_shows_detailed
+      - name: netflix_tv_shows_movies

@@ -1,0 +1,285 @@
+version: 2
+models:
+  - name: stg_neflix_movies
+    description: "Staging model for Netflix movies loaded from the bronze layer."
+    columns:
+      - name: title
+        description: "The movie title."
+        tests:
+          - not_null
+      - name: year
+        description: "The release year of the movie."
+      - name: certificate
+        description: "The certificate rating of the movie."
+      - name: duration
+        description: "The duration of the movie."
+      - name: genre
+        description: "The genre of the movie."
+      - name: rating
+        description: "The movie rating."
+      - name: description
+        description: "A description of the movie."
+      - name: stars
+        description: "The movie stars."
+      - name: votes
+        description: "The number of votes for the movie."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_name
+        description: "The source file name for the record."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
+      - name: _source_file_path
+        description: "The path of the original source file."
+
+  - name: stg_netflix_reviews
+    description: "Staging model for Netflix reviews loaded from the bronze layer."
+    columns:
+      - name: review_id
+        description: "The review identifier."
+      - name: user_name
+        description: "The name of the reviewer."
+      - name: content
+        description: "The review text content."
+      - name: score
+        description: "The numerical score for the review."
+      - name: thumbs_up_count
+        description: "The number of thumbs-up votes on the review."
+      - name: review_created_version
+        description: "The app version used when the review was created."
+      - name: at
+        description: "The timestamp of when the review was created."
+      - name: app_version
+        description: "The app version associated with the review."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_path
+        description: "The path of the original source file."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
+
+  - name: stg_netflix_stock_history
+    description: "Staging model for Netflix stock history loaded from the bronze layer."
+    columns:
+      - name: date
+        description: "The trading date."
+        tests:
+          - unique
+          - not_null
+      - name: open
+        description: "The opening stock price."
+      - name: high
+        description: "The highest stock price for the day."
+      - name: low
+        description: "The lowest stock price for the day."
+      - name: close
+        description: "The closing stock price."
+      - name: volume
+        description: "The traded volume for the day."
+      - name: dividends
+        description: "The dividends value for the day."
+      - name: stock_splits
+        description: "The stock splits value for the day."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_path
+        description: "The path of the original source file."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
+
+  - name: stg_netflix_tv_shows_details
+    description: "Staging model for Netflix TV show details loaded from the bronze layer."
+    columns:
+      - name: show_id
+        description: "The show identifier."
+        tests:
+          - not_null
+      - name: type
+        description: "The type of content (movie or TV show)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Movie", "TV Show"]
+      - name: title
+        description: "The show title."
+      - name: director
+        description: "The show director."
+      - name: cast
+        description: "The cast list for the show."
+      - name: country
+        description: "The country of origin."
+      - name: date_added
+        description: "The date when the show was added to the catalog."
+      - name: release_year
+        description: "The release year of the show."
+      - name: rating
+        description: "The content rating of the show."
+      - name: duration
+        description: "The runtime or duration of the show."
+      - name: genres
+        description: "The genre or genres assigned to the show."
+      - name: language
+        description: "The language of the show."
+      - name: description
+        description: "The description of the show."
+      - name: popularity
+        description: "The popularity score for the show."
+      - name: vote_count
+        description: "The number of votes cast for the show."
+      - name: vote_average
+        description: "The average vote score for the show."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_path
+        description: "The path of the original source file."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
+
+  - name: stg_netflix_tv_shows_movies
+    description: "Staging model for Netflix TV show movies loaded from the bronze layer."
+    columns:
+      - name: index
+        description: "The row index from the source dataset."
+      - name: id
+        description: "The show identifier."
+      - name: title
+        description: "The movie or show title."
+      - name: type
+        description: "The content type."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Movie", "TV Show"]
+      - name: description
+        description: "The content description."
+      - name: release_year
+        description: "The release year of the content."
+      - name: age_certification
+        description: "The age certification for the content."
+      - name: runtime
+        description: "The runtime in minutes."
+      - name: imdb_id
+        description: "The IMDb identifier."
+      - name: imdb_score
+        description: "The IMDb score."
+      - name: imdb_votes
+        description: "The IMDb vote count."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_path
+        description: "The path of the original source file."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
+
+  - name: stg_netflix_titles
+    description: "Staging model for Netflix titles loaded from the bronze layer."
+    columns:
+      - name: show_id
+        description: "The show identifier."
+        tests:
+          - unique
+          - not_null
+      - name: type
+        description: "The content type."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Movie", "TV Show"]
+      - name: title
+        description: "The title of the content."
+      - name: director
+        description: "The director of the content."
+      - name: cast
+        description: "The cast list for the content."
+      - name: country
+        description: "The country of origin."
+      - name: date_added
+        description: "The date the content was added."
+      - name: release_year
+        description: "The release year of the content."
+      - name: rating
+        description: "The rating for the content."
+      - name: duration
+        description: "The content duration."
+      - name: listed_in
+        description: "The categories or genres for the content."
+      - name: description
+        description: "The content description."
+      - name: ingest_dt
+        description: "The ingestion timestamp for the record."
+        tests:
+          - not_null
+      - name: _rescued_data
+        description: "Rescued data produced during ingestion."
+      - name: _source_name
+        description: "The original source name for the record."
+      - name: _dataset_name
+        description: "The original dataset name for the record."
+      - name: _source_file_path
+        description: "The path of the original source file."
+      - name: _ingestion_timestamp
+        description: "The ingestion execution timestamp."
+      - name: _ingestion_date
+        description: "The ingestion execution date."
+      - name: _run_id
+        description: "The dbt run identifier."
