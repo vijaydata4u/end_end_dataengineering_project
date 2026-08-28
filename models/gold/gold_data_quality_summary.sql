@@ -27,3 +27,10 @@ select * from metrics_quality
 union all
 
 select * from popularity_quality
+
+
+
+select * from popularity_quality
+
+select * from popularity_quality
+
