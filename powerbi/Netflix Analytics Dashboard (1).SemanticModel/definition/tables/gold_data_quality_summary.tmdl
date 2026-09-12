@@ -1,0 +1,72 @@
+table gold_data_quality_summary
+	lineageTag: c3378fec-2161-4d26-a2cc-1b0ed287437d
+
+	measure 'Total Rows' =
+			
+			SUM(gold_data_quality_summary[row_count])
+		formatString: 0
+		lineageTag: fe17656e-a45b-4808-9509-3f0b341ec148
+
+	measure 'Valid Rows' =
+			
+			CALCULATE(
+			    [Total Rows],
+			    gold_data_quality_summary[data_quality_status] = "VALID"
+			)
+		formatString: 0
+		lineageTag: 1d05ce72-9b4f-4c1a-9fcb-45118abcfb3a
+
+	measure 'Invalid Rows' =
+			
+			[Total Rows] - [Valid Rows]
+		formatString: 0
+		lineageTag: 0544797a-7978-41d1-8934-2243b27d75fa
+
+	measure 'Data Quality %' =
+			
+			DIVIDE(
+			    [Valid Rows],
+			    [Total Rows],
+			    0
+			)
+		formatString: 0.0%;-0.0%;0.0%
+		lineageTag: a620e443-43be-442a-9964-2fb28fb9e080
+
+	column source_area
+		dataType: string
+		lineageTag: 3c92b612-0990-4c9f-abcf-6c02b5063cb9
+		summarizeBy: none
+		sourceColumn: source_area
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_quality_status
+		dataType: string
+		lineageTag: 3b081896-053b-4e5b-995e-47f960307878
+		summarizeBy: none
+		sourceColumn: data_quality_status
+
+		annotation SummarizationSetBy = Automatic
+
+	column row_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 4a18087c-42f5-43d3-9611-7789b9bf06f7
+		summarizeBy: sum
+		sourceColumn: row_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_data_quality_summary = m
+		mode: import
+		source =
+				let
+				  Source = Databricks.Catalogs("adb-7405612844864358.18.azuredatabricks.net", "/sql/1.0/warehouses/c8dc05bbf95c6723", [Catalog = null, Database = null, QueryTags = null, EnableAutomaticProxyDiscovery = "enabled", Implementation = "2.0", Protocol = null]),
+				  #"Navigation 1" = Source{[Name = "gold", Kind = "Database"]}[Data],
+				  #"Navigation 2" = #"Navigation 1"{[Name = "netflix_gold", Kind = "Schema"]}[Data],
+				  #"Navigation 3" = #"Navigation 2"{[Name = "gold_data_quality_summary", Kind = "Table"]}[Data]
+				in
+				  #"Navigation 3"
+
+	annotation PBI_ResultType = Table
+
