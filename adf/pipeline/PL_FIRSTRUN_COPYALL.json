@@ -1,0 +1,134 @@
+{
+	"name": "PL_FIRSTRUN_COPYALL",
+	"properties": {
+		"activities": [
+			{
+				"name": "Web_List_SourceFiles",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"headers": {
+						"User-Agent": "ADF"
+					},
+					"url": {
+						"value": "@concat('https://api.github.com/repos/', pipeline().parameters.pOwner,'/', pipeline().parameters.pRepo, '/contents/', pipeline().parameters.pSourceFolder, '?ref=', pipeline().parameters.pBranch)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "FE_AllFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Web_List_SourceFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@json(activity('Web_List_SourceFiles').output.Response)",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "IF_IsFile",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(item().type,'file')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Copy_File_To_ADLS",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "BinarySource",
+												"storeSettings": {
+													"type": "HttpReadSettings",
+													"requestMethod": "GET"
+												}
+											},
+											"sink": {
+												"type": "BinarySink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												}
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "DS_HTTP_BinarySource",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DS_ADLS_BinarySink",
+												"type": "DatasetReference",
+												"parameters": {
+													"pFolder": {
+														"value": "@concat('landing/github/', pipeline().parameters.pOwner,'/', pipeline().parameters.pRepo,'/')",
+														"type": "Expression"
+													},
+													"pFile": {
+														"value": "@item().path",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pOwner": {
+				"type": "string"
+			},
+			"pRepo": {
+				"type": "string"
+			},
+			"pBranch": {
+				"type": "string"
+			},
+			"pSourceFolder": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-21T17:52:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

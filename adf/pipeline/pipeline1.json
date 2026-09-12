@@ -1,0 +1,270 @@
+{
+	"name": "pipeline1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set_NowUtc",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vNowUtc",
+					"value": {
+						"value": "@utcNow()",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GM_Watermark_Exists",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Set_NowUtc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_WatermarkJson",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": {
+								"value": "control/github",
+								"type": "Expression"
+							},
+							"pFile": {
+								"value": "@concat(pipeline().parameters.pOwner,'_',pipeline().parameters.pRepo,'.json')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "JsonReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set_WatermarkExists",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "GM_Watermark_Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vWatermarkExists",
+					"value": {
+						"value": "@activity('GM_Watermark_Exists').output.exists",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "IF_Watermark_Exists",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_WatermarkExists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('vWatermarkExists'), true)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "set default watermark",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "vLastRunUtc",
+								"value": {
+									"value": "'1900-01-01T00:00:00Z'",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "LU_Read_Watermark",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"dataset": {
+									"referenceName": "DS_ADLS_WatermarkJson",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": {
+											"value": "control/github",
+											"type": "Expression"
+										},
+										"pFile": {
+											"value": "@concat(pipeline().parameters.pOwner,'_',pipeline().parameters.pRepo,'.json')",
+											"type": "Expression"
+										}
+									}
+								}
+							}
+						},
+						{
+							"name": "Set_LastRun_From_File",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "LU_Read_Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "vLastRunUtc",
+								"value": {
+									"value": "@activity('LU_Read_Watermark').output.firstRow.last_run_utc",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Web_List_Commits",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "IF_Watermark_Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"headers": {
+						"User-Agent": "ADF"
+					},
+					"url": {
+						"value": "@concat(\n  'https://api.github.com/repos/',\n  pipeline().parameters.pOwner,'/',\n  pipeline().parameters.pRepo,\n  '/commits?sha=', pipeline().parameters.pBranch,\n  '&since=', variables('vLastRunUtc'),\n  '&per_page=100'\n)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pOwner": {
+				"type": "string",
+				"defaultValue": "vijaydata4u"
+			},
+			"pRepo": {
+				"type": "string",
+				"defaultValue": "Netflix_Usecase"
+			},
+			"pBranch": {
+				"type": "string",
+				"defaultValue": "main"
+			},
+			"pFolderFilter": {
+				"type": "string",
+				"defaultValue": "SourceFiles"
+			}
+		},
+		"variables": {
+			"vLastRunUtc": {
+				"type": "String"
+			},
+			"vNowUtc": {
+				"type": "String"
+			},
+			"vCommitList": {
+				"type": "String"
+			},
+			"vFileList": {
+				"type": "String"
+			},
+			"vGitHubPat": {
+				"type": "String"
+			},
+			"vWatermarkExists": {
+				"type": "Boolean"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-21T16:21:11Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

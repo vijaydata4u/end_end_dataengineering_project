@@ -1,0 +1,155 @@
+{
+	"name": "PL_GIT_INGESTION",
+	"properties": {
+		"activities": [
+			{
+				"name": "GM_Watermark_Exists",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_WatermarkJson",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": {
+								"value": "control/github",
+								"type": "Expression"
+							},
+							"pFile": {
+								"value": "@concat(pipeline().parameters.pOwner,'_',pipeline().parameters.pRepo,'.json')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"exists"
+					]
+				}
+			},
+			{
+				"name": "IF_FirstRun",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "GM_Watermark_Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(equals(activity('GM_Watermark_Exists').output.exists,false), equals(activity('GM_Watermark_Exists').output.exists, null))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Exec_Incremental_Compare_Copy",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_INCREMENTAL_COMPARE_COPY",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pOwner": {
+										"value": "@pipeline().parameters.pOwner",
+										"type": "Expression"
+									},
+									"pRepo": {
+										"value": "@pipeline().parameters.pRepo",
+										"type": "Expression"
+									},
+									"pBranch": {
+										"value": "@pipeline().parameters.pBranch",
+										"type": "Expression"
+									},
+									"pFolderFilter": {
+										"value": "@pipeline().parameters.pFolderFilter",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Exec_FirstRun_CopyAll",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_FIRSTRUN_COPYALL",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pOwner": {
+										"value": "@pipeline().parameters.pOwner",
+										"type": "Expression"
+									},
+									"pRepo": {
+										"value": "@pipeline().parameters.pRepo",
+										"type": "Expression"
+									},
+									"pBranch": {
+										"value": "@pipeline().parameters.pBranch",
+										"type": "Expression"
+									},
+									"pSourceFolder": {
+										"value": "@pipeline().parameters.pSourceFolder",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pOwner": {
+				"type": "string",
+				"defaultValue": "vijaydata4u"
+			},
+			"pRepo": {
+				"type": "string",
+				"defaultValue": "Netflix_Usecase"
+			},
+			"pBranch": {
+				"type": "string",
+				"defaultValue": "main"
+			},
+			"pSourceFolder": {
+				"type": "string",
+				"defaultValue": "SourceFiles"
+			},
+			"pFolderFilter": {
+				"type": "string",
+				"defaultValue": "SourceFiles/"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-22T08:16:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

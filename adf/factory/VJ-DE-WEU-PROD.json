@@ -1,0 +1,15 @@
+{
+	"name": "VJ-DE-WEU-PROD",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "30cabfa2-a3f5-482c-9a9f-09ebaf73ef8f",
+		"tenantId": "7ca5265b-bd6a-4c44-915e-f8e1868f4947"
+	}
+}

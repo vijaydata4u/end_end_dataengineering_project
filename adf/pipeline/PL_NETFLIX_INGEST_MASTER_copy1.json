@@ -1,0 +1,306 @@
+{
+	"name": "PL_NETFLIX_INGEST_MASTER_copy1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set_NewWatermarkUtc",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vNewWatermarkUtc",
+					"value": {
+						"value": "@{formatDateTime(utcNow(),'yyyy-MM-ddTHH:mm:ss.fffffffZ')}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "GM_Watermark_Exists",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Set_NewWatermarkUtc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_CTRL_WM_FILE_BIN",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": "@{pipeline().parameters.pControlFolder}",
+							"pFile": "@{pipeline().parameters.pWatermarkFile}"
+						}
+					},
+					"fieldList": [
+						"exists"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "IF_FirstRun",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "GM_Watermark_Exists",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('GM_Watermark_Exists').output.exists, false)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "GM_Watermark_LastModified",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_ADLS_CTRL_WM_FILE_BIN",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": "@{pipeline().parameters.pControlFolder}",
+										"pFile": "@{pipeline().parameters.pWatermarkFile}"
+									}
+								},
+								"fieldList": [
+									"lastModified"
+								],
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "BinaryReadSettings"
+								}
+							}
+						},
+						{
+							"name": "Set_LastWatermarkUtc",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GM_Watermark_LastModified",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "vLastWatermarkUtc",
+								"value": {
+									"value": "@{activity('GM_Watermark_LastModified').output.lastModified}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "EXEC_CopyIncremental",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Set_LastWatermarkUtc",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_NETFLIX_COPY_INCREMENTAL",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pSourceFolder": {
+										"value": "@{pipeline().parameters.pSourceFolder}",
+										"type": "Expression"
+									},
+									"pLandingBaseFolder": {
+										"value": "@{pipeline().parameters.pLandingBaseFolder}",
+										"type": "Expression"
+									},
+									"pIngestDateFolder": {
+										"value": "@{concat('ingest_dt=',formatDateTime(utcNow(),'yyyy-MM-dd'))}",
+										"type": "Expression"
+									},
+									"pLastWatermarkUtc": {
+										"value": "@{variables('vLastWatermarkUtc')}",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "EXEC_CopyAll",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_NETFLIX_COPY_ALL_copy1",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pSourceFolder": {
+										"value": "@{pipeline().parameters.pSourceFolder}",
+										"type": "Expression"
+									},
+									"pLandingBaseFolder": {
+										"value": "@{pipeline().parameters.pLandingBaseFolder}",
+										"type": "Expression"
+									},
+									"pIngestDateFolder": {
+										"value": "@{concat('ingest_dt=',formatDateTime(utcNow(),'yyyy-MM-dd'))}",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy_Touch_Watermark",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "IF_FirstRun",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_ADLS_CTRL_WM_FILE_BIN",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": "@{pipeline().parameters.pControlFolder}",
+							"pFile": "@{pipeline().parameters.pTouchFile}"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_ADLS_CTRL_WM_FILE_BIN",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": "@{pipeline().parameters.pControlFolder}",
+							"pFile": "@{pipeline().parameters.pWatermarkFile}"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"pSourceFolder": {
+				"type": "String",
+				"defaultValue": "files"
+			},
+			"pLandingBaseFolder": {
+				"type": "String",
+				"defaultValue": "vj-landing/landing/netflix"
+			},
+			"pControlFolder": {
+				"type": "String",
+				"defaultValue": "control/netflix/"
+			},
+			"pWatermarkFile": {
+				"type": "String",
+				"defaultValue": "_watermark.txt"
+			},
+			"pTouchFile": {
+				"type": "String",
+				"defaultValue": "_touch.txt"
+			}
+		},
+		"variables": {
+			"vNewWatermarkUtc": {
+				"type": "String"
+			},
+			"vLastWatermarkUtc": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-04-27T16:49:55Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

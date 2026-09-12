@@ -1,0 +1,127 @@
+{
+	"name": "PL_NETFLIX_COPY_ALL",
+	"properties": {
+		"activities": [
+			{
+				"name": "GM_ListFiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_SRC_FOLDER_BIN",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": "@{pipeline().parameters.pSourceFolder}"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "FE_AllFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GM_ListFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GM_ListFiles').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 20,
+					"activities": [
+						{
+							"name": "Copy_File_To_Landing",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_ADLS_SRC_FILE_BIN",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": "@{pipeline().parameters.pSourceFolder}",
+										"pFile": "@{item().name}"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_LANDING_FILE_BIN",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": "@{concat(pipeline().parameters.pLandingBaseFolder,'/',pipeline().parameters.pIngestDateFolder)}",
+										"pFile": "@{item().name}"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pSourceFolder": {
+				"type": "String"
+			},
+			"pLandingBaseFolder": {
+				"type": "String"
+			},
+			"pIngestDateFolder": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-22T08:38:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

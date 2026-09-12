@@ -1,0 +1,27 @@
+{
+	"name": "DS_ADLS_SRC_FOLDER_BIN",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_ADLS_SRC",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pFolder": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().pFolder",
+					"type": "Expression"
+				},
+				"fileSystem": "src-netflix"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

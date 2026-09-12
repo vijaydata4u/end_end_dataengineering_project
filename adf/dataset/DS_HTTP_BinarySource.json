@@ -1,0 +1,17 @@
+{
+	"name": "DS_HTTP_BinarySource",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_HTTP_GitHubApi",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

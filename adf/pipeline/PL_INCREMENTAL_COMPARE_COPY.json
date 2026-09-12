@@ -1,0 +1,268 @@
+{
+	"name": "PL_INCREMENTAL_COMPARE_COPY",
+	"properties": {
+		"activities": [
+			{
+				"name": "LU_Read_Watermark",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": false,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "DS_ADLS_WatermarkJson",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": {
+								"value": "control/github",
+								"type": "Expression"
+							},
+							"pFile": {
+								"value": "@concat(pipeline().parameters.pOwner,'_',pipeline().parameters.pRepo,'.json')",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Set_vLastSha",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "LU_Read_Watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vLastSha",
+					"value": {
+						"value": "@activity('LU_Read_Watermark').output.firstRow.last_sha",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Web_Get_Head_Commit",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set_vLastSha",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"headers": {
+						"User-Agent": "ADF"
+					},
+					"url": {
+						"value": "@concat('https://api.github.com/repos/', pipeline().parameters.pOwner,'/', pipeline().parameters.pRepo, '/commits/', pipeline().parameters.pBranch)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set_vHeadSha",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Web_Get_Head_Commit",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vHeadSha",
+					"value": {
+						"value": "@activity('Web_Get_Head_Commit').output.sha",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Web_Compare",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Set_vHeadSha",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "GET",
+					"headers": {
+						"User-Agent": "ADF"
+					},
+					"url": {
+						"value": "@concat('https://api.github.com/repos/', pipeline().parameters.pOwner,'/', pipeline().parameters.pRepo, '/compare/', variables('vLastSha'), '...', variables('vHeadSha'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "FE_ChangedFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Web_Compare",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Web_Compare').output.files",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "IF_Copy_This_File",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@and(not(equals(item().status,'removed')), or(equals(pipeline().parameters.pFolderFilter,''), startsWith(item().filename, pipeline().parameters.pFolderFilter)))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Copy_File_To_ADLS",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "BinarySource",
+												"storeSettings": {
+													"type": "HttpReadSettings",
+													"requestMethod": "GET"
+												}
+											},
+											"sink": {
+												"type": "BinarySink",
+												"storeSettings": {
+													"type": "AzureBlobFSWriteSettings"
+												}
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "DS_HTTP_BinarySource",
+												"type": "DatasetReference"
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "DS_ADLS_BinarySink",
+												"type": "DatasetReference",
+												"parameters": {
+													"pFolder": {
+														"value": "@concat('landing/github/', pipeline().parameters.pOwner,'/', pipeline().parameters.pRepo,'/')",
+														"type": "Expression"
+													},
+													"pFile": {
+														"value": "@item().filename",
+														"type": "Expression"
+													}
+												}
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pOwner": {
+				"type": "string"
+			},
+			"pRepo": {
+				"type": "string"
+			},
+			"pBranch": {
+				"type": "string"
+			},
+			"pFolderFilter": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"vLastSha": {
+				"type": "String"
+			},
+			"vHeadSha": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-21T17:52:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

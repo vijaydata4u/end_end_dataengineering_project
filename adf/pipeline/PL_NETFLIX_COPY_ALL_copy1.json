@@ -1,0 +1,152 @@
+{
+	"name": "PL_NETFLIX_COPY_ALL_copy1",
+	"properties": {
+		"activities": [
+			{
+				"name": "GM_ListFiles",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ADLS_SRC_FOLDER_BIN",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolder": "@{pipeline().parameters.pSourceFolder}"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "FE_AllFiles",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GM_ListFiles",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GM_ListFiles').output.childItems",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 20,
+					"activities": [
+						{
+							"name": "Copy_File_To_Landing",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"enableSkipIncompatibleRow": true,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Gen2_CSV_DEMO",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": {
+											"value": "@{pipeline().parameters.pSourceFolder}",
+											"type": "Expression"
+										},
+										"pFile": {
+											"value": "@{item().name}",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Par_CSV_Demo",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFolder": {
+											"value": "@{concat(pipeline().parameters.pLandingBaseFolder,'/',pipeline().parameters.pIngestDateFolder)}",
+											"type": "Expression"
+										},
+										"pFile": {
+											"value": "@{split(item().name,'.')[0]}.parquet",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"pSourceFolder": {
+				"type": "String"
+			},
+			"pLandingBaseFolder": {
+				"type": "String"
+			},
+			"pIngestDateFolder": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-04-27T16:49:55Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
