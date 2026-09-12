@@ -1,0 +1,162 @@
+table gold_content_performance
+	lineageTag: 1eddf82b-62b5-4655-8142-24a9895d60c2
+
+	measure 'Average Rating' = ```
+			AVERAGE(gold_content_performance[imdb_score])
+			
+			```
+		lineageTag: e766f5fb-ea4c-4856-9252-d22f91834dd4
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column content_key
+		dataType: string
+		lineageTag: a390d586-83f9-41d2-857f-8b0a7cde393c
+		summarizeBy: none
+		sourceColumn: content_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column title
+		dataType: string
+		lineageTag: f09b78b7-bb36-4008-bfa1-4acec8741957
+		summarizeBy: none
+		sourceColumn: title
+
+		annotation SummarizationSetBy = Automatic
+
+	column type
+		dataType: string
+		lineageTag: 4aa88832-c65c-4284-80d4-47178c6cd798
+		summarizeBy: none
+		sourceColumn: type
+
+		annotation SummarizationSetBy = Automatic
+
+	column director
+		dataType: string
+		lineageTag: f5ef8bb9-27ca-450a-bff5-9a34cd493910
+		summarizeBy: none
+		sourceColumn: director
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		lineageTag: b6297d18-81c6-4d9d-ad78-2043f0646766
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column release_year
+		dataType: int64
+		formatString: 0
+		lineageTag: f0573a7e-10b5-4cf6-b0a5-7d3b4d4fb763
+		summarizeBy: sum
+		sourceColumn: release_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column rating
+		dataType: string
+		lineageTag: d7d84fe3-d87d-4c10-8bae-689330a77b73
+		summarizeBy: none
+		sourceColumn: rating
+
+		annotation SummarizationSetBy = Automatic
+
+	column duration
+		dataType: string
+		lineageTag: b8cfac1b-d047-465d-975e-b9bc55e9e05d
+		summarizeBy: none
+		sourceColumn: duration
+
+		annotation SummarizationSetBy = Automatic
+
+	column genres
+		dataType: string
+		lineageTag: b46346e1-c137-43d2-be0f-711b714f40f5
+		summarizeBy: none
+		sourceColumn: genres
+
+		annotation SummarizationSetBy = Automatic
+
+	column imdb_id
+		dataType: string
+		lineageTag: 8bf70afc-ecb4-4e91-ad3e-171ef4f5b18b
+		summarizeBy: none
+		sourceColumn: imdb_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column imdb_score
+		dataType: double
+		lineageTag: ac30ce7b-7e8e-476e-a87b-9e9d1d028101
+		summarizeBy: sum
+		sourceColumn: imdb_score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column imdb_votes
+		dataType: int64
+		formatString: 0
+		lineageTag: 60224be4-4d10-4fbb-8234-d452c9fd872c
+		summarizeBy: sum
+		sourceColumn: imdb_votes
+
+		annotation SummarizationSetBy = Automatic
+
+	column runtime
+		dataType: int64
+		formatString: 0
+		lineageTag: c7a48a24-b6db-4ee0-b20d-88e797512eac
+		summarizeBy: sum
+		sourceColumn: runtime
+
+		annotation SummarizationSetBy = Automatic
+
+	column popularity
+		dataType: double
+		lineageTag: 83638412-b0bd-4957-9808-57b98387070d
+		summarizeBy: sum
+		sourceColumn: popularity
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column vote_count
+		dataType: int64
+		formatString: 0
+		lineageTag: 49b7b893-febf-4c4f-b2a4-1642b52f0ef5
+		summarizeBy: sum
+		sourceColumn: vote_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column vote_average
+		dataType: double
+		lineageTag: b33011f6-beba-4cd2-9cb9-c60cb0b5e647
+		summarizeBy: sum
+		sourceColumn: vote_average
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition gold_content_performance = m
+		mode: import
+		source =
+				let
+				  Source = Databricks.Catalogs("adb-7405612844864358.18.azuredatabricks.net", "/sql/1.0/warehouses/c8dc05bbf95c6723", [Catalog = null, Database = null, QueryTags = null, EnableAutomaticProxyDiscovery = "enabled", Implementation = "2.0", Protocol = null]),
+				  #"Navigation 1" = Source{[Name = "gold", Kind = "Database"]}[Data],
+				  #"Navigation 2" = #"Navigation 1"{[Name = "netflix_gold", Kind = "Schema"]}[Data],
+				  #"Navigation 3" = #"Navigation 2"{[Name = "gold_content_performance", Kind = "Table"]}[Data]
+				in
+				  #"Navigation 3"
+
+	annotation PBI_ResultType = Table
+
