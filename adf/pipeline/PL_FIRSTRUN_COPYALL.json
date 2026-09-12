@@ -4,6 +4,7 @@
 		"activities": [
 			{
 				"name": "Web_List_SourceFiles",
+				"description": "Web activity",
 				"type": "WebActivity",
 				"dependsOn": [],
 				"policy": {
